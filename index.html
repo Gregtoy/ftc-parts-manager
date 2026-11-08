@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FTC Parts Manager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;700&family=Barlow:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0c1117;--panel:#141b24;--panel2:#1b2430;--line:#2a3544;--tx:#e8eef5;--mut:#8796a8;--acc:#f2b632;--ok:#4cc38a;--warn:#e8a33d;--bad:#f0605d;color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*,*::before,*::after{box-sizing:inherit}
+html,body{margin:0}
+body{background:var(--bg);color:var(--tx);font:400 15px/1.5 Barlow,system-ui,sans-serif;min-height:100vh}
+h1,h2,h3,.num{font-family:"Barlow Semi Condensed",Barlow,system-ui,sans-serif;font-weight:700;margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:8px 0 16px}
+h1{font-size:28px;letter-spacing:.2px}
+h1 span{color:var(--acc)}
+.sub{color:var(--mut);font-size:14px}
+.btn{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px 14px}
+.btn:hover{border-color:var(--acc)}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:#1a1405;font-weight:500}
+.btn.bad{color:var(--bad)}
+.btn.on{border-color:var(--acc);color:var(--acc)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:16px}
+.stat{background:var(--panel);padding:12px 14px}
+.stat .num{font-size:30px;line-height:1.1}
+.stat small{color:var(--mut)}
+.tools{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+input,select,textarea{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:9px 12px;width:100%}
+.row select{width:auto;flex:1 1 140px}
+#q{font-size:17px;padding:12px 14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;text-align:left;padding:0;display:flex;flex-direction:column}
+.card:hover{border-color:var(--acc)}
+.ph{aspect-ratio:4/3;background:var(--panel2);display:grid;place-items:center;font-size:44px;overflow:hidden}
+.ph img{width:100%;height:100%;object-fit:cover}
+.cb{padding:10px 12px 12px;display:flex;flex-direction:column;gap:4px}
+.cb h3{font-size:18px;line-height:1.2}
+.meta{color:var(--mut);font-size:13px}
+.badge{display:inline-block;font-size:12px;font-weight:500;border-radius:4px;padding:1px 8px;border:1px solid currentColor;width:fit-content}
+.b-ok{color:var(--ok)}.b-warn{color:var(--warn)}.b-bad{color:var(--bad)}
+.loc{font-size:13px;color:var(--tx)}
+.empty{grid-column:1/-1;text-align:center;color:var(--mut);padding:40px 12px;border:1px dashed var(--line);border-radius:8px}
+.modal{position:fixed;inset:0;background:rgba(5,8,12,.75);display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:16px;z-index:20}
+.modal.open{display:flex}
+.sheet{background:var(--panel);border:1px solid var(--line);border-radius:10px;width:100%;max-width:560px;margin:auto;padding:16px}
+.sheet .ph{border-radius:8px;margin-bottom:12px;font-size:64px}
+.sheet h2{font-size:26px}
+dl{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:12px 0}
+dt{color:var(--mut)}dd{margin:0}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.form label{display:flex;flex-direction:column;gap:3px;font-size:13px;color:var(--mut)}
+.form .full{grid-column:1/-1}
+.actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:12px}
+.note{color:var(--mut);font-size:13px;border-left:3px solid var(--acc);padding:2px 10px;margin:12px 0}
+@media(max-width:620px){.stats{grid-template-columns:repeat(2,1fr)}.form{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(10px);opacity:0}}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div><h1>FTC <span>Parts</span> Manager</h1><div class="sub">Inventario de piezas del equipo: REV DUO y goBILDA</div></div>
+  <div class="row"><button class="btn" id="adm" aria-pressed="false">Entrar como Quartermaster</button></div>
+</header>
+
+<div class="stats" id="stats"></div>
+
+<div class="tools">
+  <input id="q" type="search" placeholder="Busca una pieza: channel, motor, mecanum…" aria-label="Buscar pieza">
+  <div class="row">
+    <select id="fb" aria-label="Marca"></select>
+    <select id="fc" aria-label="Categoría"></select>
+    <select id="fs" aria-label="Estado">
+      <option value="">Todos los estados</option><option value="ok">Disponible</option><option value="use">Todo en uso</option><option value="bad">Con piezas dañadas</option>
+    </select>
+    <button class="btn pri" id="add" hidden>+ Añadir pieza</button>
+  </div>
+</div>
+
+<div class="grid" id="grid"></div>
+<p class="note">Cualquier persona del equipo puede consultar el inventario. Solo el Quartermaster puede modificarlo, con su correo y contraseña.</p>
+</div>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true"><div class="sheet" id="sheet"></div></div>
+
+<script>
+var API="https://myxmadlsunpzxegmdqds.supabase.co",KEY="sb_publishable_FzGj35TSBSC3Yw-UbkLEMg_TJc8Bim3";
+var ICON={"Estructura":"📐","Motores":"⚙️","Servos":"🔧","Movimiento":"🛞","Electrónica":"🔌","Tornillería":"🔩","Herramientas":"🛠️"};
+var S=[],admin=false,editing=null,photo="",TOKEN="",msg="Cargando inventario…";
+try{TOKEN=sessionStorage.getItem("ftcpm-token")||""}catch(e){}
+admin=!!TOKEN;
+function $(id){return document.getElementById(id)}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function api(path,o){o=o||{};var h={apikey:KEY,"Content-Type":"application/json"};
+ if(TOKEN)h.Authorization="Bearer "+TOKEN;if(o.prefer)h.Prefer=o.prefer;
+ return fetch(API+path,{method:o.method||"GET",headers:h,body:o.body?JSON.stringify(o.body):undefined}).then(function(r){
+  if(!r.ok)return r.text().then(function(t){var e=new Error(t);e.status=r.status;throw e});
+  return r.status===204?null:r.text().then(function(t){return t?JSON.parse(t):null})})}
+function fromRow(r){return{id:r.id,n:r.name,b:r.brand||"",c:r.category||"",m:r.model||"",t:r.total,u:r.in_use,d:r.damaged,l:r.location||"",o:r.notes||"",img:r.image_url||""}}
+function toRow(o){return{name:o.n,brand:o.b,category:o.c,model:o.m,total:o.t,in_use:o.u,damaged:o.d,location:o.l,notes:o.o,image_url:o.img||null}}
+function load(){return api("/rest/v1/parts?select=*&order=created_at.desc").then(function(r){S=r.map(fromRow);msg="";filters();render()}).catch(function(){msg="No se pudo cargar el inventario. Revisa tu conexión y recarga la página.";render()})}
+function fail(e){if(e&&(e.status===401||/JWT/.test(e.message))){logout();alert("Tu sesión expiró. Entra otra vez como Quartermaster.")}else alert("No se pudo guardar el cambio. Intenta de nuevo.")}
+function logout(){TOKEN="";admin=false;try{sessionStorage.removeItem("ftcpm-token")}catch(e){}close();render()}
+function avail(p){return Math.max(0,p.t-p.u-p.d)}
+function st(p){if(p.d>0)return["bad","Con dañadas"];if(avail(p)>0)return["ok","Disponible"];return["warn","Todo en uso"]}
+function ph(p){return p.img?'<img src="'+esc(p.img)+'" alt="'+esc(p.n)+'">':(ICON[p.c]||"📦")}
+function opts(list,all){return '<option value="">'+all+'</option>'+list.map(function(x){return '<option>'+esc(x)+'</option>'}).join("")}
+function uniq(k){return S.map(function(p){return p[k]}).filter(function(v,i,a){return v&&a.indexOf(v)===i}).sort()}
+function filters(){var b=$("fb").value,c=$("fc").value;
+ $("fb").innerHTML=opts(uniq("b"),"Todas las marcas");$("fc").innerHTML=opts(uniq("c"),"Todas las categorías");
+ $("fb").value=b;$("fc").value=c}
+function render(){
+ var tot=0,use=0,dm=0;S.forEach(function(p){tot+=p.t;use+=p.u;dm+=p.d});
+ $("stats").innerHTML=[[S.length,"Tipos de pieza"],[tot,"Unidades en total"],[use,"En uso"],[dm,"Dañadas"]].map(function(x){return '<div class="stat"><div class="num">'+x[0]+'</div><small>'+x[1]+'</small></div>'}).join("");
+ var q=$("q").value.trim().toLowerCase(),b=$("fb").value,c=$("fc").value,s=$("fs").value;
+ var list=S.filter(function(p){
+  var hay=(p.n+" "+p.b+" "+p.c+" "+p.m+" "+p.l+" "+p.o).toLowerCase();
+  if(q&&!q.split(/\s+/).every(function(w){return hay.indexOf(w)>-1}))return false;
+  if(b&&p.b!==b)return false;if(c&&p.c!==c)return false;
+  if(s==="ok"&&avail(p)<1)return false;
+  if(s==="use"&&!(avail(p)===0&&p.d===0))return false;
+  if(s==="bad"&&p.d<1)return false;return true});
+ var none=msg||(S.length?"No hay piezas con esa búsqueda. Prueba otra palabra o quita un filtro.":"Aún no hay piezas. Entra como Quartermaster para añadir la primera.");
+ $("grid").innerHTML=list.length?list.map(function(p){var s=st(p);
+  return '<button class="card" data-id="'+p.id+'"><div class="ph">'+ph(p)+'</div><div class="cb"><h3>'+esc(p.n)+'</h3><div class="meta">'+esc(p.b)+", "+esc(p.c)+'</div><span class="badge b-'+s[0]+'">'+s[1]+'</span><div class="meta">'+avail(p)+" disponibles de "+p.t+'</div><div class="loc">📍 '+esc(p.l||"Sin ubicación")+'</div></div></button>'}).join("")
+  :'<div class="empty">'+none+'</div>';
+ $("add").hidden=!admin;$("adm").textContent=admin?"Cerrar sesión":"Entrar como Quartermaster";
+}
+function open(html){$("sheet").innerHTML=html;$("modal").classList.add("open")}
+function close(){$("modal").classList.remove("open");editing=null;photo=""}
+function detail(id){var p=S.find(function(x){return x.id===id});if(!p)return;var s=st(p);
+ open('<div class="ph">'+ph(p)+'</div><h2>'+esc(p.n)+'</h2><div class="meta">'+esc(p.b)+", "+esc(p.c)+(p.m?", modelo "+esc(p.m):"")+'</div><p><span class="badge b-'+s[0]+'">'+s[1]+'</span></p>'+
+ '<dl><dt>Total</dt><dd>'+p.t+'</dd><dt>Disponibles</dt><dd>'+avail(p)+'</dd><dt>En uso</dt><dd>'+p.u+'</dd><dt>Dañadas</dt><dd>'+p.d+'</dd><dt>Ubicación</dt><dd>'+esc(p.l||"Sin ubicación")+'</dd><dt>Notas</dt><dd>'+esc(p.o||"Sin notas")+'</dd></dl>'+
+ '<div class="actions">'+(admin?'<button class="btn" data-ed="'+p.id+'">Editar</button><button class="btn bad" data-del="'+p.id+'">Eliminar</button>':'')+'<button class="btn" data-x>Cerrar</button></div>')}
+function field(k,l,v,t,full){return '<label class="'+(full?"full":"")+'">'+l+'<input id="f_'+k+'" type="'+(t||"text")+'" value="'+esc(v)+'"'+(t==="number"?' min="0"':'')+'></label>'}
+function form(id){var p=id?S.find(function(x){return x.id===id}):{n:"",b:"REV DUO",c:"",m:"",t:1,u:0,d:0,l:"",o:""};editing=id||0;photo=p.img||"";
+ open('<h2>'+(id?"Editar pieza":"Añadir pieza")+'</h2><div class="form">'+field("n","Nombre",p.n,"",1)+
+ '<label>Marca<input id="f_b" list="lb" value="'+esc(p.b)+'"><datalist id="lb"><option>REV DUO</option><option>goBILDA</option></datalist></label>'+
+ '<label>Categoría<input id="f_c" list="lc" value="'+esc(p.c)+'"><datalist id="lc">'+Object.keys(ICON).map(function(k){return '<option>'+k+'</option>'}).join("")+'</datalist></label>'+
+ field("m","Modelo o número",p.m,"",1)+field("t","Cantidad total",p.t,"number")+field("u","En uso",p.u,"number")+field("d","Dañadas",p.d,"number")+
+ field("l","Ubicación en el salón",p.l)+field("o","Notas",p.o,"",1)+
+ '<label class="full">Foto<input id="f_img" type="file" accept="image/*"></label></div><div class="actions"><button class="btn" data-x>Cancelar</button><button class="btn pri" id="sv">Guardar pieza</button></div>')}
+function loginForm(){open('<h2>Entrar como Quartermaster</h2><div class="form"><label class="full">Correo<input id="l_e" type="email" autocomplete="username"></label><label class="full">Contraseña<input id="l_p" type="password" autocomplete="current-password"></label></div><p class="meta" id="l_m"></p><div class="actions"><button class="btn" data-x>Cancelar</button><button class="btn pri" id="lg">Entrar</button></div>')}
+function doLogin(){var e=$("l_e").value.trim(),p=$("l_p").value;if(!e||!p){$("l_m").textContent="Escribe tu correo y tu contraseña.";return}
+ fetch(API+"/auth/v1/token?grant_type=password",{method:"POST",headers:{apikey:KEY,"Content-Type":"application/json"},body:JSON.stringify({email:e,password:p})})
+ .then(function(r){return r.json().then(function(j){if(!r.ok||!j.access_token)throw 0;return j})})
+ .then(function(j){TOKEN=j.access_token;admin=true;try{sessionStorage.setItem("ftcpm-token",TOKEN)}catch(x){}close();render()})
+ .catch(function(){$("l_m").textContent="Correo o contraseña incorrectos."})}
+function resize(file,cb){var r=new FileReader();r.onload=function(){var im=new Image();im.onload=function(){var k=Math.min(1,480/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=im.width*k;c.height=im.height*k;c.getContext("2d").drawImage(im,0,0,c.width,c.height);cb(c.toDataURL("image/jpeg",.72))};im.src=r.result};r.readAsDataURL(file)}
+function val(k){return $("f_"+k).value.trim()}
+function num(k){return Math.max(0,parseInt($("f_"+k).value,10)||0)}
+function commit(){var n=val("n");if(!n){alert("Escribe el nombre de la pieza.");return}
+ var o={n:n,b:val("b")||"Otra",c:val("c")||"Otros",m:val("m"),t:num("t"),u:num("u"),d:num("d"),l:val("l"),o:val("o"),img:photo};
+ if(o.u+o.d>o.t){alert("En uso más dañadas no pueden superar el total.");return}
+ var req=editing?api("/rest/v1/parts?id=eq."+editing,{method:"PATCH",body:toRow(o),prefer:"return=minimal"}):api("/rest/v1/parts",{method:"POST",body:toRow(o),prefer:"return=minimal"});
+ req.then(function(){close();return load()}).catch(fail)}
+document.addEventListener("click",function(e){var t=e.target,card=t.closest(".card");
+ if(card)return detail(+card.dataset.id);
+ if(t.closest("[data-x]")||t===$("modal"))return close();
+ var ed=t.closest("[data-ed]");if(ed)return form(+ed.dataset.ed);
+ var dl=t.closest("[data-del]");if(dl){if(confirm("¿Eliminar esta pieza del inventario?")){api("/rest/v1/parts?id=eq."+dl.dataset.del,{method:"DELETE"}).then(function(){close();return load()}).catch(fail)}return}
+ if(t.id==="sv")commit();if(t.id==="lg")doLogin()});
+document.addEventListener("change",function(e){if(e.target.id==="f_img"&&e.target.files[0])resize(e.target.files[0],function(d){photo=d})});
+document.addEventListener("keydown",function(e){if(e.key==="Escape")close();if(e.key==="Enter"&&e.target.id==="l_p")doLogin()});
+["q","fb","fc","fs"].forEach(function(id){$(id).addEventListener("input",render)});
+$("adm").onclick=function(){admin?logout():loginForm()};
+$("add").onclick=function(){form(0)};
+render();load();
+</script>
+</body>
+</html>
