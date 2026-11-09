@@ -135,7 +135,8 @@ function api(path,o){o=o||{};var h={apikey:KEY,"Content-Type":"application/json"
 function fromRow(r){return{id:r.id,n:r.name,b:r.brand||"",c:r.category||"",m:r.model||"",t:r.total,u:r.in_use,d:r.damaged,l:r.location||"",o:r.notes||"",tn:r.team_note||"",img:r.image_url||""}}
 function toRow(o){return{name:o.n,brand:o.b,category:o.c,model:o.m,total:o.t,in_use:o.u,damaged:o.d,location:o.l,notes:o.o,team_note:o.tn||null,image_url:o.img||null}}
 function load(){return api("/rest/v1/parts?select=*&order=created_at.desc").then(function(r){S=r.map(fromRow);msg="";filters();render();setTimeout(function(){$("grid").classList.remove("anim")},1200)}).catch(function(){msg="No se pudo cargar el inventario. Revisa tu conexión y recarga la página.";render()})}
-function setRole(){return TOKEN?api("/rest/v1/profiles?select=role,email,name").then(function(r){ME=r&&r[0]?r[0]:{};ROLE=ME.role||"member";admin=ROLE==="admin"}).catch(function(e){if(e.status===401){TOKEN="";try{sessionStorage.removeItem("ftcpm-token")}catch(x){}}ROLE="";ME={};admin=false}):Promise.resolve()}
+function uid(){try{return JSON.parse(atob(TOKEN.split(".")[1].replace(/-/g,"+").replace(/_/g,"/"))).sub||""}catch(e){return ""}}
+function setRole(){return TOKEN?api("/rest/v1/profiles?select=role,email,name&user_id=eq."+uid()).then(function(r){ME=r&&r[0]?r[0]:{};ROLE=ME.role||"member";admin=ROLE==="admin"}).catch(function(e){if(e.status===401){TOKEN="";try{sessionStorage.removeItem("ftcpm-token")}catch(x){}}ROLE="";ME={};admin=false}):Promise.resolve()}
 function fail(e){if(e&&(e.status===401||/JWT/.test(e.message))){logout();alert("Tu sesión expiró. Entra otra vez como Quartermaster.")}else{var m="";try{m=JSON.parse(e.message).message}catch(x){}alert(m&&m.length<80?m:"No se pudo guardar el cambio. Intenta de nuevo.")}}
 function logout(){TOKEN="";ROLE="";ME={};admin=false;try{sessionStorage.removeItem("ftcpm-token")}catch(e){}close();render()}
 function avail(p){return Math.max(0,p.t-p.u-p.d)}
