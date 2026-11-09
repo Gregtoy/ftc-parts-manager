@@ -87,6 +87,7 @@ h1 span{background:linear-gradient(90deg,var(--acc),#ffe28a);-webkit-background-
 }
 @media(max-width:620px){.logo{height:64px}h1{font-size:26px}}
 .hist{max-height:60vh;overflow:auto}.hi{padding:8px 0;border-bottom:1px solid var(--line)}
+.perm{list-style:none;padding:0;margin:8px 0}.perm li{padding:3px 0}.perm .y::before{content:"✓ ";color:var(--ok)}.perm .n{color:var(--mut)}.perm .n::before{content:"✕ ";color:var(--bad)}.sep{border-top:1px solid var(--line);padding-top:14px}
 </style>
 </head>
 <body>
@@ -121,7 +122,7 @@ h1 span{background:linear-gradient(90deg,var(--acc),#ffe28a);-webkit-background-
 <script>
 var API="https://myxmadlsunpzxegmdqds.supabase.co",KEY="sb_publishable_FzGj35TSBSC3Yw-UbkLEMg_TJc8Bim3";
 var ICON={"Estructura":"📐","Motores":"⚙️","Servos":"🔧","Movimiento":"🛞","Electrónica":"🔌","Tornillería":"🔩","Herramientas":"🛠️"};
-var S=[],admin=false,editing=null,photo="",TOKEN="",ROLE="",msg="Cargando inventario…";
+var S=[],admin=false,editing=null,photo="",TOKEN="",ROLE="",ME={},msg="Cargando inventario…";
 try{TOKEN=sessionStorage.getItem("ftcpm-token")||""}catch(e){}
 admin=false;
 function $(id){return document.getElementById(id)}
@@ -134,9 +135,9 @@ function api(path,o){o=o||{};var h={apikey:KEY,"Content-Type":"application/json"
 function fromRow(r){return{id:r.id,n:r.name,b:r.brand||"",c:r.category||"",m:r.model||"",t:r.total,u:r.in_use,d:r.damaged,l:r.location||"",o:r.notes||"",tn:r.team_note||"",img:r.image_url||""}}
 function toRow(o){return{name:o.n,brand:o.b,category:o.c,model:o.m,total:o.t,in_use:o.u,damaged:o.d,location:o.l,notes:o.o,team_note:o.tn||null,image_url:o.img||null}}
 function load(){return api("/rest/v1/parts?select=*&order=created_at.desc").then(function(r){S=r.map(fromRow);msg="";filters();render();setTimeout(function(){$("grid").classList.remove("anim")},1200)}).catch(function(){msg="No se pudo cargar el inventario. Revisa tu conexión y recarga la página.";render()})}
-function setRole(){return TOKEN?api("/rest/v1/profiles?select=role").then(function(r){ROLE=r&&r[0]?r[0].role:"member";admin=ROLE==="admin"}).catch(function(e){if(e.status===401){TOKEN="";try{sessionStorage.removeItem("ftcpm-token")}catch(x){}}ROLE="";admin=false}):Promise.resolve()}
+function setRole(){return TOKEN?api("/rest/v1/profiles?select=role,email,name").then(function(r){ME=r&&r[0]?r[0]:{};ROLE=ME.role||"member";admin=ROLE==="admin"}).catch(function(e){if(e.status===401){TOKEN="";try{sessionStorage.removeItem("ftcpm-token")}catch(x){}}ROLE="";ME={};admin=false}):Promise.resolve()}
 function fail(e){if(e&&(e.status===401||/JWT/.test(e.message))){logout();alert("Tu sesión expiró. Entra otra vez como Quartermaster.")}else{var m="";try{m=JSON.parse(e.message).message}catch(x){}alert(m&&m.length<80?m:"No se pudo guardar el cambio. Intenta de nuevo.")}}
-function logout(){TOKEN="";ROLE="";admin=false;try{sessionStorage.removeItem("ftcpm-token")}catch(e){}close();render()}
+function logout(){TOKEN="";ROLE="";ME={};admin=false;try{sessionStorage.removeItem("ftcpm-token")}catch(e){}close();render()}
 function avail(p){return Math.max(0,p.t-p.u-p.d)}
 function st(p){if(p.d>0)return["bad","Con dañadas"];if(avail(p)>0)return["ok","Disponible"];return["warn","Todo en uso"]}
 function ph(p){return p.img?'<img src="'+esc(p.img)+'" alt="'+esc(p.n)+'">':(ICON[p.c]||"📦")}
@@ -160,7 +161,7 @@ function render(){
  $("grid").innerHTML=list.length?list.map(function(p,i){var s=st(p);
   return '<button class="card" style="--i:'+Math.min(i,12)+'" data-id="'+p.id+'"><div class="ph">'+ph(p)+'</div><div class="cb"><h3>'+esc(p.n)+'</h3><div class="meta">'+esc(p.b)+", "+esc(p.c)+'</div><span class="badge b-'+s[0]+'">'+s[1]+'</span><div class="meta">'+avail(p)+" disponibles de "+p.t+'</div><div class="loc">📍 '+esc(p.l||"Sin ubicación")+'</div></div></button>'}).join("")
   :'<div class="empty">'+none+'</div>';
- $("add").hidden=!admin;$("hist").hidden=!admin;$("adm").textContent=TOKEN?"Cerrar sesión":"Iniciar sesión";
+ $("add").hidden=!admin;$("hist").hidden=!admin;$("adm").textContent=TOKEN?"Mi perfil":"Iniciar sesión";
 }
 function open(html){$("sheet").innerHTML=html;$("modal").classList.add("open")}
 function close(){$("modal").classList.remove("open");editing=null;photo=""}
@@ -188,6 +189,14 @@ function memberSave(){var u=num("u"),d=num("d"),p=S.find(function(x){return x.id
  if(u+d>p.t){alert("En uso más dañadas no pueden superar el total ("+p.t+").");return}
  api("/rest/v1/rpc/member_update_part",{method:"POST",body:{p_id:editing,p_in_use:u,p_damaged:d,p_note:val("tn")}}).then(function(){close();return load()}).catch(fail)}
 function showHist(){api("/rest/v1/movements?select=*&order=created_at.desc&limit=50").then(function(r){open('<h2>Historial de cambios</h2><div class="hist">'+(r.length?r.map(function(m){return '<div class="hi"><b>'+esc(m.part_name)+'</b> · '+esc(m.summary)+'<div class="meta">'+esc(m.user_email)+' · '+new Date(m.created_at).toLocaleString("es")+'</div></div>'}).join(""):'<p class="meta">Aún no hay cambios registrados.</p>')+'</div><div class="actions"><button class="btn" data-x>Cerrar</button></div>')}).catch(fail)}
+var PERM_M=[[1,"Consultar el inventario"],[1,"Actualizar piezas en uso y dañadas"],[1,"Escribir notas del equipo"],[0,"Añadir o eliminar piezas"],[0,"Cambiar el total, la ubicación o las fotos"]];
+var PERM_A=[[1,"Consultar el inventario"],[1,"Actualizar piezas en uso y dañadas, y notas"],[1,"Añadir, editar y eliminar piezas"],[1,"Cambiar totales, ubicaciones y fotos"],[1,"Ver el historial de cambios"]];
+function profile(){var a=ME.role==="admin",L=a?PERM_A:PERM_M;
+ open('<h2>Mi perfil</h2><dl><dt>Nombre</dt><dd>'+esc(ME.name||"Sin nombre")+'</dd><dt>Correo</dt><dd>'+esc(ME.email||"")+'</dd><dt>Rol</dt><dd><span class="badge '+(a?"b-ok":"b-warn")+'">'+(a?"Quartermaster":"Miembro del equipo")+'</span></dd></dl>'+
+ '<div class="row"><input id="f_nm" maxlength="60" placeholder="Tu nombre" aria-label="Tu nombre" value="'+esc(ME.name||"")+'" style="flex:1 1 180px;width:auto"><button class="btn" id="sn">Guardar nombre</button></div>'+
+ '<h3 style="margin-top:16px">Tus permisos</h3><ul class="perm">'+L.map(function(x){return '<li class="'+(x[0]?"y":"n")+'">'+x[1]+'</li>'}).join("")+'</ul>'+
+ '<div class="actions sep"><button class="btn" data-x>Cerrar ventana</button><button class="btn bad" id="lo">Cerrar sesión</button></div>')}
+function saveName(){api("/rest/v1/rpc/set_my_name",{method:"POST",body:{p_name:$("f_nm").value}}).then(function(){return setRole()}).then(function(){render();profile()}).catch(fail)}
 function resize(file,cb){var r=new FileReader();r.onload=function(){var im=new Image();im.onload=function(){var k=Math.min(1,480/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=im.width*k;c.height=im.height*k;c.getContext("2d").drawImage(im,0,0,c.width,c.height);cb(c.toDataURL("image/jpeg",.72))};im.src=r.result};r.readAsDataURL(file)}
 function val(k){return $("f_"+k).value.trim()}
 function num(k){return Math.max(0,parseInt($("f_"+k).value,10)||0)}
@@ -201,11 +210,11 @@ document.addEventListener("click",function(e){var t=e.target,card=t.closest(".ca
  if(t.closest("[data-x]")||t===$("modal"))return close();
  var up=t.closest("[data-up]");if(up)return memberForm(+up.dataset.up);var ed=t.closest("[data-ed]");if(ed)return form(+ed.dataset.ed);
  var dl=t.closest("[data-del]");if(dl){if(confirm("¿Eliminar esta pieza del inventario?")){api("/rest/v1/parts?id=eq."+dl.dataset.del,{method:"DELETE"}).then(function(){close();return load()}).catch(fail)}return}
- if(t.id==="sv")commit();if(t.id==="lg")doLogin();if(t.id==="mv")memberSave()});
+ if(t.id==="sv")commit();if(t.id==="lg")doLogin();if(t.id==="mv")memberSave();if(t.id==="sn")saveName();if(t.id==="lo"&&confirm("Saldrás de tu cuenta. Podrás volver a iniciar sesión después. ¿Quieres continuar?"))logout()});
 document.addEventListener("change",function(e){if(e.target.id==="f_img"&&e.target.files[0])resize(e.target.files[0],function(d){photo=d})});
 document.addEventListener("keydown",function(e){if(e.key==="Escape")close();if(e.key==="Enter"&&e.target.id==="l_p")doLogin()});
 ["q","fb","fc","fs"].forEach(function(id){$(id).addEventListener("input",render)});
-$("adm").onclick=function(){TOKEN?logout():loginForm()};$("hist").onclick=showHist;
+$("adm").onclick=function(){TOKEN?profile():loginForm()};$("hist").onclick=showHist;
 $("add").onclick=function(){form(0)};
 setRole().then(render);render();load();
 </script>
